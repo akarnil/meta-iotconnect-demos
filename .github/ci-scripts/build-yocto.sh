@@ -12,7 +12,8 @@ git checkout v1.11.0
 pip3 install sphinx
 sudo apt update && sudo apt install -y parted mtools
 ./setup.py --bsp=01047
-cp -r /src/yocto-layers/ /src/msc-ldk/sources/meta-iotconnect/
+cp -r /src/yocto-layers/ /src/msc-ldk/sources/meta-iotconnect-demos/
+git clone git@github.com:avnet-iotconnect/meta-iotconnect.git /src/msc-ldk/sources/meta-iotconnect/
 
 #if [ $1 = "test" ]; then
   cp -r /src/b0000-internal-pluma-linux-advanced-test-suite/meta-lats/meta-lats-kirkstone/ /src/msc-ldk/sources/
