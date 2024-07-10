@@ -16,6 +16,11 @@ APP_INSTALL_DIR = "${base_prefix}/usr/iotc/bin/iotc-python-sdk"
 # FILES:${PN}-dev = "${PRIVATE_DATA_DIR}/* \
 # "
 
+RDEPENDS:${PN} += " python3 \
+    iotc-ipc-dbus \
+    python3-pydbus \
+"
+
 FILES:${PN} +=  "${ROOT_HOME}/ " \
                 "${ROOT_HOME}/iotc-application.sh "
 

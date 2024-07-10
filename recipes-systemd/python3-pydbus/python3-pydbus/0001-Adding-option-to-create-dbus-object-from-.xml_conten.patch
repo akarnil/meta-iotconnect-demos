@@ -1,0 +1,76 @@
+From e4cc07d9fdfccc681afbf025c3cb8f72ee0d80a7 Mon Sep 17 00:00:00 2001
+From: VPutys <vputys@witekio.com>
+Date: Tue, 9 Jul 2024 10:19:19 +0100
+Subject: [PATCH] Adding option to create dbus object from .xml_content
+ variable inside of passed object
+
+---
+ pydbus/publication.py  | 19 ++++++++++++++-----
+ pydbus/registration.py |  9 +++++++++
+ 2 files changed, 23 insertions(+), 5 deletions(-)
+
+diff --git a/pydbus/publication.py b/pydbus/publication.py
+index ef03825..5727ead 100644
+--- a/pydbus/publication.py
++++ b/pydbus/publication.py
+@@ -5,13 +5,14 @@ from .auto_names import *
+ class Publication(ExitableWithAliases("unpublish")):
+ 	__slots__ = ()
+ 
+-	def __init__(self, bus, bus_name, *objects, **kwargs): # allow_replacement=True, replace=False
++	def __init__(self, bus, bus_name, *objects, **kwargs): # allow_replacement=True, replace=False, use_xaml=False
+ 		# Python 2 sux
+ 		for kwarg in kwargs:
+-			if kwarg not in ("allow_replacement", "replace",):
++			if kwarg not in ("allow_replacement", "replace", "use_xml_var",):
+ 				raise TypeError(self.__qualname__ + " got an unexpected keyword argument '{}'".format(kwarg))
+ 		allow_replacement = kwargs.get("allow_replacement", True)
+ 		replace = kwargs.get("replace", False)
++		use_xml = kwargs.get("use_xml_var", False)
+ 
+ 		bus_name = auto_bus_name(bus_name)
+ 
+@@ -29,7 +30,10 @@ class Publication(ExitableWithAliases("unpublish")):
+ 				object = object_info
+ 
+ 			path = auto_object_path(bus_name, path)
+-			self._at_exit(bus.register_object(path, object, node_info).__exit__)
++			if (not use_xml):
++				self._at_exit(bus.register_object(path, object, node_info).__exit__)
++			else:
++				self._at_exit(bus.register_object_from_xml(path, object, node_info).__exit__)
+ 
+ 		# Request name only after registering all the objects.
+ 		self._at_exit(bus.request_name(bus_name, allow_replacement=allow_replacement, replace=replace).__exit__)
+@@ -37,6 +41,11 @@ class Publication(ExitableWithAliases("unpublish")):
+ class PublicationMixin(object):
+ 	__slots__ = ()
+ 
+-	def publish(self, bus_name, *objects):
++	def publish(self, bus_name, *objects, **kwargs):
+ 		"""Expose objects on the bus."""
+-		return Publication(self, bus_name, *objects)
++		for kwarg in kwargs:
++			if kwarg not in ("use_xml_var",):
++				raise TypeError(self.__qualname__ + " got an unexpected keyword argument '{}'".format(kwarg))
++		use_xml_var = kwargs.get("use_xml_var", False)
++
++		return Publication(self, bus_name, *objects, use_xml_var = use_xml_var)
+\ No newline at end of file
+diff --git a/pydbus/registration.py b/pydbus/registration.py
+index 1d2cbcb..a524844 100644
+--- a/pydbus/registration.py
++++ b/pydbus/registration.py
+@@ -160,3 +160,12 @@ class RegistrationMixin:
+ 
+ 		wrapper = ObjectWrapper(object, interfaces)
+ 		return ObjectRegistration(self, path, interfaces, wrapper, own_wrapper=True)
++
++	def register_object_from_xml(self, path, object, node_info):
++
++		node_info = [Gio.DBusNodeInfo.new_for_xml(ni) for ni in [object.xml_content]]
++		interfaces = sum((ni.interfaces for ni in node_info), [])
++
++		wrapper = ObjectWrapper(object, interfaces)
++		return ObjectRegistration(self, path, interfaces, wrapper, own_wrapper=True)
++
